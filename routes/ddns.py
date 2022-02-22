@@ -1,11 +1,12 @@
 from flask import Response, request
-from __main__ import app, g, users, dns
+from main import app, g, users, dns
 from controllers.users import OperationError
 from controllers.dns import DNSError
 
 import re, ipaddress
 
 domainRegex = re.compile(r'^([A-Za-z0-9]\.|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9]\.){1,3}[A-Za-z]{2,6}$')
+txtRegex = re.compile('^[\w !"#$%&\'()*+,\/:;<=>?@[\]^`{|}~.-]+$')
 
 def isIP(addr, protocol = ipaddress.IPv4Address):
     try:
@@ -18,6 +19,9 @@ def isIP(addr, protocol = ipaddress.IPv4Address):
 
 def isDomain(domain):
     return domainRegex.fullmatch(domain)
+
+def isTXT(txt):
+    return len(txt) <= 255 and txtRegex.fullmatch(txt)
 
 def checkType(type_, value):
 
@@ -39,7 +43,7 @@ def checkType(type_, value):
     if type_ == 'MX' and not isDomain(value):
         return {"errorType": "DNSError", "msg": "Type MX with non-domain-name value."}, 403
 
-    if type_ == 'TXT' and (len(value) > 255 or value.count('\n')):
+    if type_ == 'TXT' and not isTXT(txt):
         return {"errorType": "DNSError", "msg": "Type TXT with value longer than 255 chars or more than 1 line."}, 403
 
     return None
